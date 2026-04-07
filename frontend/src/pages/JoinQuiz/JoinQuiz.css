@@ -1,0 +1,160 @@
+.join-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 1.5rem;
+}
+
+/* Glass Card Box */
+.join-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+}
+
+/* Icon & Branding */
+.icon-badge {
+  background: #6366f1;
+  color: white;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+}
+
+.join-header h1 {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  letter-spacing: -1px;
+}
+
+.join-header h1 span {
+  color: #6366f1;
+}
+
+.join-header p {
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 2.5rem;
+}
+
+/* Attractive Inputs */
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1.2rem;
+  color: #94a3b8;
+  transition: color 0.3s ease;
+}
+
+.attractive-input {
+  width: 100%;
+  padding: 1rem 1rem 1rem 3.5rem;
+  background: white;
+  border: 2px solid #f1f5f9;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.attractive-input::placeholder {
+  color: #cbd5e1;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.attractive-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+.attractive-input:focus + .input-icon {
+  color: #6366f1;
+}
+
+.pin-input {
+  letter-spacing: 0.3rem;
+  text-align: left;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.2rem;
+}
+
+/* Attractive Action Button */
+.btn-primary {
+  margin-top: 1rem;
+  background: #6366f1;
+  color: white;
+  padding: 1.2rem;
+  border-radius: 18px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #4f46e5;
+  box-shadow: 0 15px 30px rgba(99, 102, 241, 0.4);
+}
+
+/* Footer Tag */
+.join-footer {
+  margin-top: 2rem;
+}
+
+.secure-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(0,0,0,0.03);
+  padding: 6px 14px;
+  border-radius: 100px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+  .join-card {
+    padding: 2.5rem 1.5rem;
+    border-radius: 24px;
+  }
+  
+  .join-header h1 {
+    font-size: 1.8rem;
+  }
+}

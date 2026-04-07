@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import JoinQuiz from './pages/JoinQuiz';
-import ClientQuizContainer from './pages/ClientQuizContainer';
-import AdminDashboard from './pages/AdminDashboard';
+import JoinQuiz from './pages/JoinQuiz/JoinQuiz';
+import ClientQuizContainer from './pages/ClientQuizContainer/ClientQuizContainer';
+import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 
 function App() {
   return (
