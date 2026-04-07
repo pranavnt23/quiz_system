@@ -97,3 +97,39 @@ def get_quiz(quiz_id: int, db: Session = Depends(get_db)):
         "quiz_code": quiz.quiz_code,
         "questions": q_out
     }
+
+@router.delete("/{quiz_id}")
+def delete_quiz(quiz_id: int, db: Session = Depends(get_db)):
+    # 1. Verify the quiz exists
+    db_quiz = db.query(models.Quiz).filter(models.Quiz.id == quiz_id).first()
+    
+    if not db_quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+
+    try:
+        # 2. Delete all Options associated with this quiz's questions
+        # We use a subquery to find all question IDs belonging to this quiz
+        question_ids = db.query(models.Question.id).filter(models.Question.quiz_id == quiz_id).all()
+        # Convert list of tuples to flat list: [1, 2, 3]
+        q_id_list = [q.id for q in question_ids]
+
+        if q_id_list:
+            db.query(models.Option).filter(models.Option.question_id.in_(q_id_list)).delete(synchronize_session=False)
+
+        # 3. Delete all Questions
+        db.query(models.Question).filter(models.Question.quiz_id == quiz_id).delete(synchronize_session=False)
+
+        # 4. Clean up related Live tables (LiveQuiz, LiveQuestion) if they exist
+        db.query(models.LiveQuestion).filter(models.LiveQuestion.quiz_id == quiz_id).delete(synchronize_session=False)
+        db.query(models.LiveQuiz).filter(models.LiveQuiz.quiz_id == quiz_id).delete(synchronize_session=False)
+
+        # 5. Delete the Quiz itself
+        db.delete(db_quiz)
+        
+        db.commit()
+        return {"message": f"Quiz {quiz_id} and all related Questions/Options deleted successfully"}
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error during delete: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error during deletion")

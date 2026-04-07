@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 import models
 import websocket_manager
-from routes.quiz_management import router as quiz_router
+from routes.quiz_crud import router as quiz_router
 
 # Initialize Database
 Base.metadata.create_all(bind=engine)

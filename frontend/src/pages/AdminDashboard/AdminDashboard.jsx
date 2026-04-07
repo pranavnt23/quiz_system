@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Added for navigation
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Radio, ListChecks, ChevronDown, Activity } from 'lucide-react';
-import LiveQuiz from './LiveQuiz';
-import ExistingQuiz from './ExistingQuiz';
-import LiveMonitor from './LiveMonitor'; // This is your original dashboard content
+import { LayoutDashboard, Radio, ListChecks, ChevronDown, Plus } from 'lucide-react';
+
+// Correct Imports based on your existing structure
+import LiveQuiz from './LiveQuiz/LiveQuiz';
+import ExistingQuiz from './ExistingQuiz/ExistingQuiz';
+import LiveMonitor from './LiveMonitor';  
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
-  const [view, setView] = useState('hub'); // 'hub' or 'monitor'
+  const [view, setView] = useState('hub'); 
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [showLive, setShowLive] = useState(true);
   const [showExisting, setShowExisting] = useState(false);
+  
+  const navigate = useNavigate();
 
-  // Mock Data - In real app, fetch from your Supabase/Backend
+  // Mock Data
   const liveQuizzes = [
     { id: 101, title: "Final Term Physics", topic: "Quantum Mechanics", players: 42, code: "QX-99" }
   ];
@@ -20,6 +25,10 @@ export default function AdminDashboard() {
   const handleViewDetails = (quiz) => {
     setActiveQuiz(quiz);
     setView('monitor');
+  };
+
+  const handleCreateQuiz = () => {
+    navigate('/create-quiz'); // Adjust this route to match your App.js
   };
 
   if (view === 'monitor') {
@@ -33,6 +42,12 @@ export default function AdminDashboard() {
           <LayoutDashboard className="text-indigo-600" size={32} />
           <h1>Quiz<span>Portal</span></h1>
         </div>
+
+        {/* --- ADDED CREATE BUTTON --- */}
+        <button className="btn-create-header" onClick={handleCreateQuiz}>
+          <Plus size={20} />
+          <span>Create New Quiz</span>
+        </button>
       </header>
 
       <main className="hub-content">
@@ -68,7 +83,7 @@ export default function AdminDashboard() {
           <button className="dropdown-trigger" onClick={() => setShowExisting(!showExisting)}>
             <div className="flex items-center gap-3">
               <ListChecks size={20} />
-              <h2>Existing Library</h2>
+              <h2>Existing Quizzes</h2>
             </div>
             <ChevronDown className={`arrow ${showExisting ? 'rotate' : ''}`} />
           </button>

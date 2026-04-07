@@ -1,0 +1,26 @@
+.view {
+  color: #6366f1; /* Indigo */
+}
+
+.view:hover {
+  background: #eef2ff;
+}
+
+.quiz-desc {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 1.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limit to 2 lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 2.7rem; /* Fixed height for alignment */
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
