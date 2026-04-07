@@ -1,130 +1,92 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Users, Zap, Play, List, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Radio, ListChecks, ChevronDown, Activity } from 'lucide-react';
+import LiveQuiz from './LiveQuiz';
+import ExistingQuiz from './ExistingQuiz';
+import LiveMonitor from './LiveMonitor'; // This is your original dashboard content
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
-  const [logs, setLogs] = useState([]);
-  const [stats, setStats] = useState({});
-  const [players, setPlayers] = useState([]);
-  const wsRef = useRef(null);
-  const logsEndRef = useRef(null);
-  const [quizIdInput, setQuizIdInput] = useState('1');
+  const [view, setView] = useState('hub'); // 'hub' or 'monitor'
+  const [activeQuiz, setActiveQuiz] = useState(null);
+  const [showLive, setShowLive] = useState(true);
+  const [showExisting, setShowExisting] = useState(false);
 
-  useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:8000/ws/admin`;
-    wsRef.current = new WebSocket(wsUrl);
+  // Mock Data - In real app, fetch from your Supabase/Backend
+  const liveQuizzes = [
+    { id: 101, title: "Final Term Physics", topic: "Quantum Mechanics", players: 42, code: "QX-99" }
+  ];
 
-    wsRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'log') {
-        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        setLogs(prev => [...prev, { time: timestamp, msg: data.log }]);
-      } else if (data.type === 'chart_update') {
-        setStats(data.stats);
-      } else if (data.type === 'players_update') {
-        setPlayers(data.players);
-      }
-    };
-    return () => wsRef.current?.close();
-  }, []);
-
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
-
-  const handleStartQuiz = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ action: 'start_quiz', quiz_id: parseInt(quizIdInput) }));
-    }
+  const handleViewDetails = (quiz) => {
+    setActiveQuiz(quiz);
+    setView('monitor');
   };
 
+  if (view === 'monitor') {
+    return <LiveMonitor quiz={activeQuiz} goBack={() => setView('hub')} />;
+  }
+
   return (
-    <div className="admin-wrapper">
-      {/* TOP NAVIGATION BAR */}
-      <nav className="admin-nav">
-        <div className="nav-brand">
-          <div className="brand-logo"><ShieldCheck size={24} /></div>
-          <div className="brand-text">
-            <h2>Admin Console</h2>
-            <span className="live-indicator"><span className="dot" /> System Active</span>
-          </div>
+    <div className="admin-hub-wrapper">
+      <header className="hub-header">
+        <div className="brand">
+          <LayoutDashboard className="text-indigo-600" size={32} />
+          <h1>Quiz<span>Portal</span></h1>
         </div>
+      </header>
 
-        <div className="nav-actions">
-          <div className="id-box">
-            <label>QUIZ ID</label>
-            <input type="number" value={quizIdInput} onChange={e => setQuizIdInput(e.target.value)} />
-          </div>
-          <button className="btn-launch" onClick={handleStartQuiz}>
-            <Play size={18} fill="currentColor" />
-            <span>Launch Quiz</span>
+      <main className="hub-content">
+        {/* LIVE QUIZZES SECTION */}
+        <section className="dropdown-section">
+          <button className="dropdown-trigger" onClick={() => setShowLive(!showLive)}>
+            <div className="flex items-center gap-3">
+              <div className={`status-orb ${liveQuizzes.length > 0 ? 'pulse-green' : ''}`} />
+              <Radio size={20} />
+              <h2>Live Sessions</h2>
+            </div>
+            <ChevronDown className={`arrow ${showLive ? 'rotate' : ''}`} />
           </button>
-        </div>
-      </nav>
 
-      {/* MAIN CONTENT GRID */}
-      <div className="admin-grid">
-        
-        {/* LEFT: ACTIVITY FEED */}
-        <section className="glass-box feed-container">
-          <div className="box-header">
-            <List size={20} />
-            <h3>Activity Stream</h3>
-          </div>
-          <div className="scroll-area">
-            <AnimatePresence>
-              {logs.map((log, i) => (
-                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} key={i} className="log-card">
-                  <span className="time-tag">{log.time}</span>
-                  <p>{log.msg}</p>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            <div ref={logsEndRef} />
-          </div>
+          <AnimatePresence>
+            {showLive && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="grid-container"
+              >
+                {liveQuizzes.map(quiz => (
+                  <LiveQuiz key={quiz.id} quiz={quiz} onView={() => handleViewDetails(quiz)} />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
 
-        {/* RIGHT: ANALYTICS & PLAYERS */}
-        <div className="stats-column">
-          
-          <section className="glass-box players-box">
-            <div className="box-header">
-              <Users size={20} />
-              <h3>Players ({players.length})</h3>
+        {/* EXISTING QUIZZES SECTION */}
+        <section className="dropdown-section">
+          <button className="dropdown-trigger" onClick={() => setShowExisting(!showExisting)}>
+            <div className="flex items-center gap-3">
+              <ListChecks size={20} />
+              <h2>Existing Library</h2>
             </div>
-            <div className="player-grid">
-              {players.map(p => (
-                <span key={p.id} className="player-badge">{p.username}</span>
-              ))}
-            </div>
-          </section>
+            <ChevronDown className={`arrow ${showExisting ? 'rotate' : ''}`} />
+          </button>
 
-          <section className="glass-box chart-box">
-            <div className="box-header">
-              <Activity size={20} />
-              <h3>Live Responses</h3>
-            </div>
-            <div className="chart-area">
-              {Object.entries(stats).map(([id, count]) => {
-                const max = Math.max(...Object.values(stats), 1);
-                return (
-                  <div key={id} className="bar-wrapper">
-                    <div className="bar-track">
-                      <motion.div className="bar-fill" animate={{ height: `${(count/max)*100}%` }}>
-                        <span className="count-label">{count}</span>
-                      </motion.div>
-                    </div>
-                    <span className="bar-name">Opt {id}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-        </div>
-      </div>
+          <AnimatePresence>
+            {showExisting && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="grid-container"
+              >
+                <ExistingQuiz />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+      </main>
     </div>
   );
 }
