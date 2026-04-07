@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #f0f4f8; 
+  color: #1e293b;
+  min-height: 100dvh;
+  position: relative;
+}
+
+/* Animated Bright Aurora Background */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  z-index: -1;
+  background: radial-gradient(circle at 30% 30%, #4facfe 0%, transparent 25%),
+              radial-gradient(circle at 70% 20%, #00f2fe 0%, transparent 25%),
+              radial-gradient(circle at 50% 50%, #7062f5 0%, transparent 30%),
+              radial-gradient(circle at 20% 80%, #f093fb 0%, transparent 25%),
+              radial-gradient(circle at 80% 80%, #5eead4 0%, transparent 25%);
+  animation: aurora-rotate 30s linear infinite;
+  filter: blur(60px);
+  opacity: 0.6;
+}
+
+@keyframes aurora-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
