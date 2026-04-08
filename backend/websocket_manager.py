@@ -86,7 +86,9 @@ async def websocket_client_endpoint(websocket: WebSocket, quiz_code: str, userna
     # Send players list to admin
     users = db.query(models.User).filter(models.User.quiz_id == quiz.id).all()
     user_list = [{"id": u.id, "username": u.username} for u in users]
-    await manager.broadcast_admin(json.dumps({"type": "players_update", "players": user_list}))
+    update_msg = json.dumps({"type": "players_update", "players": user_list})
+    await manager.broadcast_admin(update_msg)
+    await manager.broadcast_quiz(quiz.id, update_msg)
     
     try:
         while True:
@@ -94,18 +96,29 @@ async def websocket_client_endpoint(websocket: WebSocket, quiz_code: str, userna
             packet = json.loads(data)
             if packet.get("action") == "submit_answer":
                 if quiz.id not in manager.temp_answers:
-                    manager.temp_answers[quiz.id] = []
-                manager.temp_answers[quiz.id].append({
+                    manager.temp_answers[quiz.id] = {}
+                
+                opts = packet.get("option_ids", [])
+                
+                # Broadcsat debug directly to Admin Feed showing real-time websocket intercept
+                await manager.broadcast_admin(json.dumps({
+                    "type": "log", 
+                    "log": f"Realtime Intercept: {user.username} submitted {opts}"
+                }))
+
+                # Capture the array of selections but firmly overwrite the last answer per user.id
+                manager.temp_answers[quiz.id][user.id] = {
                     "user_id": user.id,
                     "question_id": packet.get("question_id"),
-                    "option_id": packet.get("option_id"),
-                    "timestamp": packet.get("timestamp")
-                })
+                    "option_ids": opts,
+                    "timestamp": packet.get("timestamp"),
+                    "username": user.username
+                }
     except WebSocketDisconnect:
         manager.disconnect(websocket, quiz.id)
         db.close()
 
-async def mpi_distribute_eval(quiz_id, question_id, answers, db):
+async def mpi_distribute_eval(quiz_id, question_id, answers, db, start_ts, duration):
     if manager.size <= 1:
         # Fallback if running without MPI
         for ans in answers:
@@ -131,7 +144,9 @@ async def mpi_distribute_eval(quiz_id, question_id, answers, db):
             "type": "evaluate",
             "quiz_id": quiz_id,
             "question_id": question_id,
-            "answers": chunks[i-1]
+            "answers": chunks[i-1],
+            "start_ts": start_ts,
+            "duration": duration
         }, dest=i, tag=11)
         
         await manager.broadcast_admin(json.dumps({
@@ -191,25 +206,29 @@ async def quiz_flow(quiz_id: int):
         options = db.query(models.Option).filter(models.Option.question_id == q.id).all()
         opts_list = [{"id": o.id, "text": o.option_text} for o in options]
         
-        manager.temp_answers[quiz_id] = [] # Clear previous
+        manager.temp_answers[quiz_id] = {} # Clear previous (use dict to store single latest answer per user)
+        
+        start_ts = datetime.utcnow().timestamp()
         
         await manager.broadcast_quiz(quiz_id, json.dumps({
             "phase": 2,
             "question_id": q.id,
             "options": opts_list,
             "duration": q.time_limit_options,
-            "start_ts": datetime.utcnow().timestamp()
+            "start_ts": start_ts
         }))
         await manager.broadcast_admin(json.dumps({"type": "log", "log": f"Phase 2: Answering question {q.question_number}"}))
         await asyncio.sleep(q.time_limit_options)
 
         # Collect Answers
-        answers = manager.temp_answers.get(quiz_id, [])
+        answers = list(manager.temp_answers.get(quiz_id, {}).values())
         await manager.broadcast_admin(json.dumps({"type": "log", "log": f"Collected {len(answers)} answers, sending to MPI queue..."}))
 
         # MPI Eval
-        evaluated_results = await mpi_distribute_eval(quiz_id, q.id, answers, db)
+        evaluated_results = await mpi_distribute_eval(quiz_id, q.id, answers, db, start_ts, q.time_limit_options)
         
+        correct_option_id = [o.id for o in options if o.is_correct][0] if options else None
+
         # Prepare Option Stats for Admin
         stats = {}
         for ans in evaluated_results:
@@ -218,7 +237,8 @@ async def quiz_flow(quiz_id: int):
             
         await manager.broadcast_admin(json.dumps({
             "type": "chart_update",
-            "stats": stats
+            "stats": stats,
+            "correct_option_id": correct_option_id
         }))
 
         # Send individual feedback

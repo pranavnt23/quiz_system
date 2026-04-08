@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Edit3, Trash2, Rocket, Hash, Loader2, Eye } from 'lucide-react';
 import './ExistingQuiz.css';
 
-export default function ExistingQuiz() {
+export default function ExistingQuiz({ onLaunch }) {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -111,7 +111,7 @@ export default function ExistingQuiz() {
             <h3>{q.topic}</h3>
             <p className="quiz-desc">{q.quiz_description}</p>
             
-            <button className="btn-launch-main">
+            <button className="btn-launch-main" onClick={() => onLaunch && onLaunch(q)}>
               <Rocket size={16} /> Launch Session
             </button>
           </div>

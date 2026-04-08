@@ -16,35 +16,50 @@ def worker_loop(comm, rank):
                 quiz_id = data.get("quiz_id")
                 question_id = data.get("question_id")
                 answers = data.get("answers")
-                
-                print(f"Worker {rank} → Evaluating {len(answers)} answers for question {question_id}")
+                start_ts = data.get("start_ts", 0)
+                duration = data.get("duration", 1)
                 
                 results = []
                 for ans in answers:
-                    opt = db.query(models.Option).filter(models.Option.id == ans["option_id"]).first()
-                    is_correct = opt.is_correct if opt else False
+                    print(f"Worker {rank} → processing User {ans.get('username')}")
+                    
+                    option_ids = ans.get("option_ids", [])
+                    is_correct = False
+                    primary_option_id = None
+                    
+                    if option_ids:
+                        primary_option_id = option_ids[-1] # Fallback baseline
+                        for oid in option_ids:
+                            opt = db.query(models.Option).filter(models.Option.id == oid).first()
+                            if opt and opt.is_correct:
+                                is_correct = True
+                                primary_option_id = oid # Use the correct one for DB
+                                break
                     
                     points = 0
                     if is_correct:
-                        # Speed points (using dummy simple formula: basic 100 pt if correct, plus bonus mapping not provided, so let's default 100)
-                        # We can add time difference logic if we know when it started.
-                        points = 100 
+                        time_elapsed = ans.get("timestamp", start_ts) - start_ts
+                        if time_elapsed < 0: time_elapsed = 0
+                        if time_elapsed > duration: time_elapsed = duration
+                        points = int(1000 * (1 - (time_elapsed / duration)))
                         
                     ans["is_correct"] = is_correct
                     ans["points"] = points
+                    ans["option_id"] = primary_option_id
                     results.append(ans)
                     
-                    # Write response to DB
-                    resp = models.Response(
-                        user_id=ans["user_id"],
-                        quiz_id=quiz_id,
-                        question_id=question_id,
-                        option_id=ans["option_id"],
-                        is_correct=is_correct,
-                        points_earned=points,
-                        processing_node_id=rank
-                    )
-                    db.add(resp)
+                    if primary_option_id is not None:
+                        # Write response to DB safely
+                        resp = models.Response(
+                            user_id=ans["user_id"],
+                            quiz_id=quiz_id,
+                            question_id=question_id,
+                            option_id=primary_option_id,
+                            is_correct=is_correct,
+                            points_earned=points,
+                            processing_node_id=rank
+                        )
+                        db.add(resp)
                     
                     # Update Score
                     score = db.query(models.Score).filter(
@@ -78,7 +93,8 @@ def worker_loop(comm, rank):
                     leaders.append({
                         "user_id": s.user_id,
                         "username": user.username if user else "Unknown",
-                        "rank": rank_count
+                        "rank": rank_count,
+                        "score": s.total_score
                     })
                     rank_count += 1
                     

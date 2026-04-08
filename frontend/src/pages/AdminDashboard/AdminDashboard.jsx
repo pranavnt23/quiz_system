@@ -96,7 +96,7 @@ export default function AdminDashboard() {
                 exit={{ height: 0, opacity: 0 }}
                 className="grid-container"
               >
-                <ExistingQuiz />
+                <ExistingQuiz onLaunch={handleViewDetails} />
               </motion.div>
             )}
           </AnimatePresence>

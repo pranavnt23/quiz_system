@@ -1,0 +1,245 @@
+/* Container Layout */
+.admin-wrapper {
+    padding: clamp(1rem, 3vw, 2rem);
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: 100vh;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    color: #1e293b;
+}
+
+/* Back Button Styling */
+.btn-back-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    /* Vibrant Indigo Color */
+    color: #4f46e5; 
+    background: #ffffff;
+    
+    /* Shape & Border */
+    padding: 8px 16px;
+    border-radius: 12px;
+    border: 1px solid #e0e7ff;
+    
+    /* Font */
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    
+    /* Transitions */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-back-nav:hover {
+    background-color: #f5f7ff; /* Very light indigo tint */
+    border-color: #c7d2fe;
+    color: #4338ca;
+    transform: translateX(-3px); /* Subtle slide to emphasize "Back" */
+}
+
+.btn-back-nav:active {
+    transform: scale(0.95);
+    background-color: #eef2ff;
+}
+
+/* Ensure the icon inherits the color */
+.btn-back-nav svg {
+    stroke-width: 2.5px;
+}
+
+/* Attractive Navigation */
+.admin-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    padding: 1rem 1.5rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+.btn-start-quiz {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    padding: 0.6rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+    cursor: pointer;
+}
+
+.btn-start-quiz:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn-start-quiz:active {
+    transform: translateY(0);
+}
+
+/* Main Grid Setup */
+.admin-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 1.5rem;
+    height: auto;
+}
+
+/* Glass Box utility */
+.glass-box {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 24px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+
+.box-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.box-header h3 {
+    font-weight: 800;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+}
+
+/* Feed / Logs Area */
+.feed-container {
+    height: 70vh;
+}
+
+.scroll-area {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.log-card {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0.85rem 1rem;
+    border-radius: 14px;
+    margin-bottom: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+/* Charts and Stats Column */
+.stats-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.player-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.player-badge {
+    background: #ffffff;
+    padding: 0.4rem 0.9rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+}
+
+.chart-area {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 200px;
+    padding: 1rem 0;
+}
+
+.bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+}
+
+.bar-track {
+    width: 28px;
+    height: 100%;
+    border-radius: 10px;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    background: rgba(15, 23, 42, 0.05);
+}
+
+.bar-fill {
+    width: 100%;
+    border-radius: 10px;
+    position: relative;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+}
+
+.count-label {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 800;
+    font-size: 0.75rem;
+}
+
+.bar-name {
+    margin-top: 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+/* Screen Adaptability */
+@media (max-width: 1100px) {
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+    .feed-container {
+        height: 400px;
+    }
+}
+
+@media (max-width: 640px) {
+    .admin-nav {
+        flex-direction: column;
+        text-align: center;
+    }
+    .btn-start-quiz {
+        width: 100%;
+    }
+}

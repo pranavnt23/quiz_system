@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List
 from pydantic import BaseModel
@@ -133,3 +133,67 @@ def delete_quiz(quiz_id: int, db: Session = Depends(get_db)):
         db.rollback()
         print(f"Error during delete: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error during deletion")
+
+
+# GET PLAYERS (Lobby/Waiting Room) ---
+@router.get("/{quiz_id}/players")
+def get_quiz_players(quiz_id: int, db: Session = Depends(get_db)):
+    """Fetch currently registered users (waiting room) for the admin."""
+    # Simple query as all data is within the User table
+    users = db.query(models.User).filter(models.User.quiz_id == quiz_id).all()
+    return [
+        {
+            "id": u.id, 
+            "username": u.username, 
+            "socket_id": u.socket_id
+        } for u in users
+    ]
+
+# GET LEADERBOARD (Final Standings) ---
+@router.get("/{quiz_id}/leaderboard")
+def get_quiz_leaderboard(quiz_id: int, db: Session = Depends(get_db)):
+    """Fetch the absolute final leaderboard using a JOIN for efficiency."""
+    # We use joinedload to grab User data in the same SQL query
+    scores = db.query(models.Score).options(
+        joinedload(models.Score.user)
+    ).filter(
+        models.Score.quiz_id == quiz_id
+    ).order_by(
+        models.Score.total_score.desc()
+    ).all()
+
+    return [
+        {
+            "user_id": s.user_id,
+            "username": s.user.username if s.user else "Unknown",
+            "total_score": s.total_score,
+            "rank": s.rank
+        } for s in scores
+    ]
+
+# GET RESPONSES (Audit Log) ---
+@router.get("/{quiz_id}/responses")
+def get_quiz_responses(quiz_id: int, db: Session = Depends(get_db)):
+    """Fetch detailed log of all player responses with Question and User data."""
+    # We join both User and Question to provide a readable log
+    responses = db.query(models.Response).options(
+        joinedload(models.Response.user),
+        joinedload(models.Response.question)
+    ).filter(
+        models.Response.quiz_id == quiz_id
+    ).order_by(
+        models.Response.created_at.asc()
+    ).all()
+
+    return [
+        {
+            "response_id": r.id,
+            "username": r.user.username if r.user else "Unknown",
+            "question_text": r.question.question_text if r.question else "Deleted Question",
+            "option_id": r.option_id,
+            "is_correct": r.is_correct,
+            "points_earned": r.points_earned,
+            "processing_node_id": r.processing_node_id,
+            "timestamp": r.created_at
+        } for r in responses
+    ]
