@@ -9,7 +9,7 @@ async def simulate_player(quiz_code, username, delay):
     await asyncio.sleep(delay)
     uri = f"ws://127.0.0.1:8000/ws/{quiz_code}/{username}"
     try:
-        async with websockets.connect(uri) as websocket:
+        async with websockets.connect(uri, ping_interval=None, ping_timeout=None) as websocket:
             print(f"[+] {username} connected to {quiz_code} waiting room.")
             
             while True:
@@ -34,8 +34,7 @@ async def simulate_player(quiz_code, username, delay):
                     
                     answer_payload = {
                         "action": "submit_answer",
-                        "question_id": question_id,
-                        "option_id": chosen,
+                        "option_ids": [chosen],
                         "timestamp": time.time()
                     }
                     
@@ -62,8 +61,8 @@ async def main():
     
     tasks = []
     for i in range(num_bots):
-        # Stagger connections slightly
-        delay = random.uniform(0.1, 2.0)
+        # Stagger connections cleanly to avoid blocking synchronous DB adds
+        delay = i * 1.5
         bot_name = f"Bot_Parallel_{i+1}"
         tasks.append(asyncio.create_task(simulate_player(quiz_code, bot_name, delay)))
         

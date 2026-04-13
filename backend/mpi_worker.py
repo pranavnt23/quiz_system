@@ -21,7 +21,7 @@ def worker_loop(comm, rank):
                 
                 results = []
                 for ans in answers:
-                    print(f"Worker {rank} → processing User {ans.get('username')}")
+                    print(f"Worker {rank} -> processing User {ans.get('username')}")
                     
                     option_ids = ans.get("option_ids", [])
                     is_correct = False
@@ -79,7 +79,7 @@ def worker_loop(comm, rank):
 
             elif msg_type == "rank":
                 quiz_id = data.get("quiz_id")
-                print(f"Worker {rank} → Computing Leaderboard for quiz {quiz_id}")
+                print(f"Worker {rank} -> Computing Leaderboard for quiz {quiz_id}")
                 
                 # Fetch all scores for quiz, order by total_score desc
                 scores = db.query(models.Score).filter(models.Score.quiz_id == quiz_id).order_by(models.Score.total_score.desc()).all()
@@ -104,11 +104,17 @@ def worker_loop(comm, rank):
                 comm.send(leaders, dest=0, tag=12)
                 
             elif msg_type == "exit":
-                print(f"Worker {rank} → Exiting.")
+                print(f"Worker {rank} -> Exiting.")
                 break
                 
         except Exception as e:
-            print(f"Worker {rank} error: {str(e)}")
+            error_trace = f"Worker {rank} FATAL error: {str(e)}"
+            print(error_trace)
+            
+            # HARD WRITE THE ERROR TO A FILE FOR DEBUGGING
+            with open(f"worker_{rank}_error.log", "a") as err_log:
+                err_log.write(error_trace + "\n")
+                
             try:
                 comm.send([], dest=0, tag=12) # Unlock master
             except:

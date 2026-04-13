@@ -81,42 +81,47 @@ async def websocket_client_endpoint(websocket: WebSocket, quiz_code: str, userna
     db.commit()
     db.refresh(user)
 
-    await manager.connect(websocket, quiz.id)
-    
-    # Send players list to admin
+    # Extract vars locally so they survive the session close
+    l_quiz_id = quiz.id
+    l_user_id = user.id
+    l_username = user.username
+
+    # Send players list to admin while DB is open
     users = db.query(models.User).filter(models.User.quiz_id == quiz.id).all()
     user_list = [{"id": u.id, "username": u.username} for u in users]
     update_msg = json.dumps({"type": "players_update", "players": user_list})
+    
+    # CRITICAL: Close the database session to return it to the connection pool BEFORE the eternal loop
+    db.close()
+
+    await manager.connect(websocket, l_quiz_id)
     await manager.broadcast_admin(update_msg)
-    await manager.broadcast_quiz(quiz.id, update_msg)
+    await manager.broadcast_quiz(l_quiz_id, update_msg)
     
     try:
         while True:
             data = await websocket.receive_text()
             packet = json.loads(data)
             if packet.get("action") == "submit_answer":
-                if quiz.id not in manager.temp_answers:
-                    manager.temp_answers[quiz.id] = {}
+                if l_quiz_id not in manager.temp_answers:
+                    manager.temp_answers[l_quiz_id] = {}
                 
                 opts = packet.get("option_ids", [])
                 
-                # Broadcsat debug directly to Admin Feed showing real-time websocket intercept
                 await manager.broadcast_admin(json.dumps({
                     "type": "log", 
-                    "log": f"Realtime Intercept: {user.username} submitted {opts}"
+                    "log": f"Realtime Intercept: {l_username} submitted {opts}"
                 }))
 
-                # Capture the array of selections but firmly overwrite the last answer per user.id
-                manager.temp_answers[quiz.id][user.id] = {
-                    "user_id": user.id,
+                manager.temp_answers[l_quiz_id][l_user_id] = {
+                    "user_id": l_user_id,
                     "question_id": packet.get("question_id"),
                     "option_ids": opts,
                     "timestamp": packet.get("timestamp"),
-                    "username": user.username
+                    "username": l_username
                 }
     except WebSocketDisconnect:
-        manager.disconnect(websocket, quiz.id)
-        db.close()
+        manager.disconnect(websocket, l_quiz_id)
 
 async def mpi_distribute_eval(quiz_id, question_id, answers, db, start_ts, duration):
     if manager.size <= 1:
