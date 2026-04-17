@@ -7,12 +7,16 @@ import models
 import websocket_manager
 from routes.quiz_crud import router as quiz_router
 
-# Initialize Database
-Base.metadata.create_all(bind=engine)
-
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
+
+# Initialize Database safely: Only rank 0 runs the generation
+if rank == 0:
+    Base.metadata.create_all(bind=engine)
+
+# Block all processes until rank 0 finishes creating tables
+comm.Barrier()
 
 print(f"Running rank {rank}")
 

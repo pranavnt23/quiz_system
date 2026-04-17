@@ -16,6 +16,8 @@ export default function ClientQuizContainer() {
   // Changed to Array for multiple selections
   const [selectedOptions, setSelectedOptions] = useState([]); 
   const [players, setPlayers] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isCorrectFB, setIsCorrectFB] = useState(false);
   
   const wsRef = useRef(null);
 
@@ -28,13 +30,18 @@ export default function ClientQuizContainer() {
       const data = JSON.parse(event.data);
       if (data.phase !== undefined) {
         setPhase(data.phase);
+        setTimeLeft(data.duration || 0);
+        
         if (data.phase === 1) { 
           setQuestionText(data.text); 
           setSelectedOptions([]); // Reset selections for new question
           setCorrectOptionId(null); 
         }
         else if (data.phase === 2) { setOptions(data.options); }
-        else if (data.phase === 3) { setCorrectOptionId(data.correct_option_id); }
+        else if (data.phase === 3) { 
+            setCorrectOptionId(data.correct_option_id); 
+            if (data.feedback) setIsCorrectFB(data.feedback[username] || false);
+        }
         else if (data.phase === 4 || data.phase === 6) { setLeaderboard(data.leaderboard); }
         else if (data.phase === 5) { setMessage(data.message); }
       } else if (data.type === 'players_update') {
@@ -43,6 +50,12 @@ export default function ClientQuizContainer() {
     };
     return () => wsRef.current?.close();
   }, [quizCode, username]);
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const interval = setInterval(() => setTimeLeft(prev => prev > 0 ? prev - 1 : 0), 1000);
+    return () => clearInterval(interval);
+  }, [timeLeft]);
 
   // Toggle Logic: Select if not present, Deselect if present
   const handleOptionToggle = (optionId) => {
@@ -115,29 +128,66 @@ export default function ClientQuizContainer() {
       );
 
       case 3: 
-        // Logic for multiple: correct if all selected IDs are right
-        const isCorrect = selectedOptions.includes(correctOptionId); 
         return (
-          <motion.div key="p3" className={`fullscreen-feedback ${isCorrect ? 'correct' : 'wrong'}`}>
+          <motion.div key="p3" className={`fullscreen-feedback ${isCorrectFB ? 'correct' : 'wrong'}`}>
              <div className="feedback-inner">
-               {isCorrect ? <CheckCircle2 size={100} /> : <XCircle size={100} />}
-               <h1>{isCorrect ? 'POINT SECURED!' : 'MISSED IT!'}</h1>
+               {isCorrectFB ? <CheckCircle2 size={100} /> : <XCircle size={100} />}
+               <h1>{isCorrectFB ? 'POINT SECURED!' : 'MISSED IT!'}</h1>
              </div>
           </motion.div>
         );
 
       case 4:
       case 6:
+        // Calculate the maximum score to define 100% width on the bar graph
+        const maxScore = Math.max(...leaderboard.map(u => u.score), 1000); 
+
         return (
-          <motion.div key="p4" className="client-box leaderboard-container">
-            <div className="leader-header"><Trophy className="text-yellow-500" /> Leaderboard</div>
-            {leaderboard.map((u, i) => (
-              <div key={i} className={`leader-row ${u.username === username ? 'me' : ''}`}>
-                <span className="rank">#{u.rank}</span>
-                <span className="name">{u.username}</span>
-                <span className="score">{u.score} pts</span>
-              </div>
-            ))}
+          <motion.div 
+            key="p4" 
+            initial={{scale: 0.8, opacity: 0}} 
+            animate={{scale: 1, opacity: 1}} 
+            className="client-box leaderboard-container-enhanced"
+          >
+            <div className="leader-header-enhanced">
+              <Trophy size={42} fill="currentColor" className="trophy-icon" /> 
+              <h2>Top Performers</h2>
+            </div>
+            
+            <div className="leader-list leaderboard-graph">
+              {leaderboard.map((u, i) => {
+                const isMe = u.username === username;
+                let rankClass = "rank-standard";
+                let medal = null;
+                
+                if (u.rank === 1) { rankClass = "rank-gold"; medal = "🥇"; }
+                else if (u.rank === 2) { rankClass = "rank-silver"; medal = "🥈"; }
+                else if (u.rank === 3) { rankClass = "rank-bronze"; medal = "🥉"; }
+
+                const barWidth = Math.max((u.score / maxScore) * 100, 5) + "%";
+
+                return (
+                  <motion.div 
+                    initial={{x: -30, opacity: 0}}
+                    animate={{x: 0, opacity: 1}}
+                    transition={{delay: i * 0.1, type: "spring"}}
+                    key={i} 
+                    className={`leader-row-enhanced ${rankClass} ${isMe ? 'is-me-highlight' : ''}`}
+                  >
+                    <div className="leader-bar" style={{ width: barWidth }} />
+                    <div className="leader-content">
+                      <div className="flex-row" style={{ zIndex: 2 }}>
+                        <div className="rank-badge">{medal || `#${u.rank}`}</div>
+                        <span className="leader-name">{u.username} {isMe && <span className="you-badge">You</span>}</span>
+                      </div>
+                      <span className="leader-score" style={{ zIndex: 2 }}>
+                        {u.score} <span className="pts-label">pts</span>
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </motion.div>
         );
 
@@ -151,6 +201,14 @@ export default function ClientQuizContainer() {
         <div className="blob one"></div>
         <div className="blob two"></div>
       </div>
+      
+      {(phase === 1 || phase === 2) && (
+        <div className="timer-top-right">
+          <Timer size={24} />
+          <span>{timeLeft}s</span>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         {renderPhaseContent()}
       </AnimatePresence>

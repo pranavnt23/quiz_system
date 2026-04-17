@@ -71,15 +71,42 @@ async def websocket_client_endpoint(websocket: WebSocket, quiz_code: str, userna
     db = SessionLocal()
     quiz = db.query(models.Quiz).filter(models.Quiz.quiz_code == quiz_code).first()
     if not quiz:
-        await websocket.close()
+        try:
+            await websocket.close()
+        except:
+            pass
         db.close()
         return
 
-    # Add user to DB
-    user = models.User(username=username, quiz_id=quiz.id, socket_id=str(id(websocket)))
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    import uuid
+    from sqlalchemy.exc import IntegrityError
+    
+    # Generate an explicitly unique socket_id instead of relying on memory address `id(websocket)`,
+    # which Python may recycle when bots/users rapidly reconnect, causing UniqueViolation.
+    unique_socket_id = uuid.uuid4().hex
+    
+    user = models.User(username=username, quiz_id=quiz.id, socket_id=unique_socket_id)
+    
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    except IntegrityError:
+        # If there's any constraint failure, rollback and attempt to fetch existing session if valid
+        db.rollback()
+        user = db.query(models.User).filter(models.User.username == username, models.User.quiz_id == quiz.id).first()
+        if not user:
+            # Fallback for unexpected failures
+            unique_socket_id = uuid.uuid4().hex
+            user = models.User(username=username, quiz_id=quiz.id, socket_id=unique_socket_id)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+    except Exception as e:
+        db.rollback()
+        print(f"WS Connection Error for {username}:", e)
+        db.close()
+        return
 
     # Extract vars locally so they survive the session close
     l_quiz_id = quiz.id
@@ -95,6 +122,7 @@ async def websocket_client_endpoint(websocket: WebSocket, quiz_code: str, userna
     db.close()
 
     await manager.connect(websocket, l_quiz_id)
+    print(f"Broadcasting players to {len(manager.admins)} admins. Payload: {update_msg}")
     await manager.broadcast_admin(update_msg)
     await manager.broadcast_quiz(l_quiz_id, update_msg)
     
@@ -108,10 +136,12 @@ async def websocket_client_endpoint(websocket: WebSocket, quiz_code: str, userna
                 
                 opts = packet.get("option_ids", [])
                 
-                await manager.broadcast_admin(json.dumps({
+                admin_log = json.dumps({
                     "type": "log", 
                     "log": f"Realtime Intercept: {l_username} submitted {opts}"
-                }))
+                })
+                print(f"Broadcasting log event to admins: {admin_log}")
+                await manager.broadcast_admin(admin_log)
 
                 manager.temp_answers[l_quiz_id][l_user_id] = {
                     "user_id": l_user_id,
@@ -213,7 +243,8 @@ async def quiz_flow(quiz_id: int):
         
         manager.temp_answers[quiz_id] = {} # Clear previous (use dict to store single latest answer per user)
         
-        start_ts = datetime.utcnow().timestamp()
+        import time
+        start_ts = time.time()
         
         await manager.broadcast_quiz(quiz_id, json.dumps({
             "phase": 2,
@@ -258,8 +289,8 @@ async def quiz_flow(quiz_id: int):
                 pass
                 
         # To simplify, we send a massive payload, or since we only broadcast, let's do a single broadcast.
-        # It's better to broadcast result map
-        feedback_map = {res["user_id"]: res["is_correct"] for res in evaluated_results}
+        # It's better to broadcast result map mapped by username since the client doesn't explicitly store its DB ID.
+        feedback_map = {res["username"]: res["is_correct"] for res in evaluated_results}
         
         # Phase 3: Result Feedback (5s)
         await manager.broadcast_quiz(quiz_id, json.dumps({

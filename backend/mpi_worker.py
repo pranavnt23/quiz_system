@@ -25,15 +25,17 @@ def worker_loop(comm, rank):
                     
                     option_ids = ans.get("option_ids", [])
                     is_correct = False
-                    primary_option_id = None
+                    primary_option_id = option_ids[-1] if option_ids else None
                     
-                    if option_ids:
-                        primary_option_id = option_ids[-1] # Fallback baseline
+                    correct_opts = db.query(models.Option).filter(models.Option.question_id == question_id, models.Option.is_correct == True).all()
+                    correct_opt_ids = {o.id for o in correct_opts}
+                    selected_opt_ids = set(option_ids)
+                    
+                    if selected_opt_ids and selected_opt_ids == correct_opt_ids:
+                        is_correct = True
                         for oid in option_ids:
-                            opt = db.query(models.Option).filter(models.Option.id == oid).first()
-                            if opt and opt.is_correct:
-                                is_correct = True
-                                primary_option_id = oid # Use the correct one for DB
+                            if oid in correct_opt_ids:
+                                primary_option_id = oid
                                 break
                     
                     points = 0

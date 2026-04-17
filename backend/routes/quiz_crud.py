@@ -107,27 +107,34 @@ def delete_quiz(quiz_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Quiz not found")
 
     try:
-        # 2. Delete all Options associated with this quiz's questions
-        # We use a subquery to find all question IDs belonging to this quiz
-        question_ids = db.query(models.Question.id).filter(models.Question.quiz_id == quiz_id).all()
-        # Convert list of tuples to flat list: [1, 2, 3]
-        q_id_list = [q.id for q in question_ids]
+        # Delete dependent tables first to avoid foreign key violations.
+        
+        # 1. Delete Responses and Scores (depend on User, Question, Option, Quiz)
+        db.query(models.Response).filter(models.Response.quiz_id == quiz_id).delete(synchronize_session=False)
+        db.query(models.Score).filter(models.Score.quiz_id == quiz_id).delete(synchronize_session=False)
 
-        if q_id_list:
-            db.query(models.Option).filter(models.Option.question_id.in_(q_id_list)).delete(synchronize_session=False)
-
-        # 3. Delete all Questions
-        db.query(models.Question).filter(models.Question.quiz_id == quiz_id).delete(synchronize_session=False)
-
-        # 4. Clean up related Live tables (LiveQuiz, LiveQuestion) if they exist
+        # 2. Delete Live states
         db.query(models.LiveQuestion).filter(models.LiveQuestion.quiz_id == quiz_id).delete(synchronize_session=False)
         db.query(models.LiveQuiz).filter(models.LiveQuiz.quiz_id == quiz_id).delete(synchronize_session=False)
 
-        # 5. Delete the Quiz itself
-        db.delete(db_quiz)
+        # 3. Delete Options (depend on Question)
+        question_ids = db.query(models.Question.id).filter(models.Question.quiz_id == quiz_id).all()
+        q_id_list = [q.id for q in question_ids]
+        if q_id_list:
+            db.query(models.Option).filter(models.Option.question_id.in_(q_id_list)).delete(synchronize_session=False)
+
+        # 4. Delete Questions (depend on Quiz)
+        db.query(models.Question).filter(models.Question.quiz_id == quiz_id).delete(synchronize_session=False)
+
+        # 5. Delete Users associated with this quiz
+        # (Users are in the lobby or have played, and point to this quiz)
+        db.query(models.User).filter(models.User.quiz_id == quiz_id).delete(synchronize_session=False)
+
+        # 6. Finally, delete the Quiz itself
+        db.query(models.Quiz).filter(models.Quiz.id == quiz_id).delete(synchronize_session=False)
         
         db.commit()
-        return {"message": f"Quiz {quiz_id} and all related Questions/Options deleted successfully"}
+        return {"message": f"Quiz {quiz_id} and all related data deleted successfully"}
 
     except Exception as e:
         db.rollback()
